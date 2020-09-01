@@ -1,6 +1,11 @@
+import 'dart:convert';
+
+import 'package:channab/dio/dio.dart';
 import 'package:channab/pages/auth/dont_have_account_signin%20copy.dart';
 import 'package:channab/shared/button.dart';
 import 'package:channab/shared/common.dart';
+import 'package:channab/store/store.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 class OTP_Verification extends StatefulWidget {
@@ -16,10 +21,36 @@ class _OTP_VerificationState extends State<OTP_Verification> {
   final _formKey = GlobalKey<FormState>();
   
   String _otp = '';
+  bool _submitting = false;
+  bool _otpErr = false;
+  String _otpErrMsg = '';
 
   void _submit() async {
-    _formKey.currentState.save();
-    Navigator.pushReplacementNamed(context, widget.nextRoute);
+    if (_formKey.currentState.validate()) {
+      _formKey.currentState.save();
+      setState(() => _submitting = true);
+      FormData formData = new FormData.fromMap({
+        "otp": int.parse(_otp),
+      });
+
+      try{
+        Response res = await dio.post('/confirm_registeration/', data: formData);
+        Map<String, dynamic> data = jsonDecode(res.data);
+        if(data['status'] == 100){
+          _otpErr = true;
+          _otpErrMsg = data['message'];
+        }else{
+          Navigator.pushReplacementNamed(context, widget.nextRoute);
+        }
+      }catch(e){
+        print('OTP_ERROR');
+        print(e);
+        _otpErr = true;
+        _otpErrMsg = 'Something went wrong! Please try again later.';
+      }
+      setState(() => _submitting = false);
+    }
+    // Navigator.pushReplacementNamed(context, widget.nextRoute);
   }
   @override
   Widget build(BuildContext context) {
@@ -36,9 +67,6 @@ class _OTP_VerificationState extends State<OTP_Verification> {
         leading: Container(),
       ),
       body: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).primaryColor,
-        ),
         child: Column(
           children: [
             Expanded(
@@ -47,6 +75,9 @@ class _OTP_VerificationState extends State<OTP_Verification> {
                   children: [
                     Container(
                       width: screenWidth,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).primaryColor,
+                      ),
                       child: Column(
                         children: [
                           SizedBox(height: 20,),
@@ -80,8 +111,19 @@ class _OTP_VerificationState extends State<OTP_Verification> {
                               decoration: InputDecoration(
                                 labelText: 'OTP'
                               ),
-                              onSaved: (v) => _otp = v
+                              onSaved: (v) => _otp = v.trim(),
+                              validator: (v) => v.length > 0 ? null : 'Invalid',
                             ),
+
+                            _otpErr ? Container(
+                              margin: EdgeInsets.only(top: 20),
+                              child: Center(
+                                child: Text(_otpErrMsg, style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.redAccent
+                                ),textAlign: TextAlign.center,),
+                              ),
+                            ) : Container(),
 
                             SizedBox(height: PERCENT(screenHeight, 20)),
 
@@ -94,6 +136,7 @@ class _OTP_VerificationState extends State<OTP_Verification> {
                                 borderRadius: 50.0,
                                 fontSize: 18.0,
                                 textColor: Colors.white,
+                                submitting: _submitting,
                                 onPressed: _submit
                               ),
                             ),

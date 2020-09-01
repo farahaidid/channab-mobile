@@ -1,3 +1,4 @@
+import 'package:channab/store/store.dart';
 import 'package:flutter/material.dart';
 
 class Home extends StatefulWidget {
@@ -27,6 +28,14 @@ class _HomeState extends State<Home> {
               title: Text('Add A Farm Animal', style: TextStyle(fontSize: 15.0) ),
               onTap: () {
                 Navigator.pushNamed(context, '/farm_animal_form');
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.exit_to_app),
+              title: Text('Logout', style: TextStyle(fontSize: 15.0) ),
+              onTap: () {
+                Store.clearStore();
+                Navigator.pushReplacementNamed(context, '/');
               },
             ),
           ],

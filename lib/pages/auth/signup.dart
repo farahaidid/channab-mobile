@@ -1,6 +1,12 @@
+import 'dart:convert';
+
+import 'package:channab/dio/dio.dart';
 import 'package:channab/pages/auth/already_have_account_signin.dart';
+import 'package:channab/pages/auth/otp_verification.dart';
 import 'package:channab/shared/button.dart';
 import 'package:channab/shared/common.dart';
+import 'package:channab/store/store.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 class SignUp extends StatefulWidget {
@@ -15,10 +21,52 @@ class _SignUpState extends State<SignUp> {
   String _mobileNumber = '';
   String _password = '';
   bool _hidePass = true;
+  bool _submitting = false;
+  bool _signupErr = false;
+  String _signupErrMsg = '';
 
   void _signup() async {
-    _formKey.currentState.save();
-    Navigator.pushReplacementNamed(context, '/createpin');
+    if (_formKey.currentState.validate()) {
+      _formKey.currentState.save();
+
+      String formattedMobileNumber = '';
+      if(_mobileNumber.startsWith('0092')){
+        formattedMobileNumber = _mobileNumber.substring(2);
+      }else if(_mobileNumber.startsWith('92')){
+        formattedMobileNumber = '92' + _mobileNumber.substring(2);
+      }else if(_mobileNumber.startsWith('0')){
+        formattedMobileNumber = '92' + _mobileNumber.substring(1);
+      }else{
+        formattedMobileNumber = _mobileNumber;
+      }
+
+      print(formattedMobileNumber);
+      setState(() => _submitting = true);
+      FormData formData = new FormData.fromMap({
+        "mobile_number": formattedMobileNumber,
+        "password": _password,
+      });
+
+      try{
+        Response res = await dio.post('/register/', data: formData);
+        Map<String, dynamic> data = jsonDecode(res.data);
+        if(data['user_id'] == null){
+          _signupErr = true;
+          _signupErrMsg = data['message'];
+        }else{
+          Store.setToken(data['token']);
+          Navigator.pushReplacement(context, new MaterialPageRoute(builder: (context) => OTP_Verification(nextRoute: '/signin') ));
+        }
+      }catch(e){
+        print('SIGNUP_ERROR');
+        print(e.message);
+        _signupErr = true;
+        _signupErrMsg = 'Something went wrong! Please try again later.';
+      }
+      setState(() => _submitting = false);
+
+    }
+    // Navigator.pushReplacementNamed(context, '/createpin');
   }
 
   @override
@@ -71,24 +119,36 @@ class _SignUpState extends State<SignUp> {
                         key: _formKey,
                         child: Column(
                           children: [
-                            TextFormField(
-                              decoration: InputDecoration(
-                                labelText: 'First Name'
-                              ),
-                              onSaved: (v) => _firstName = v
-                            ),
-                            TextFormField(
-                              decoration: InputDecoration(
-                                labelText: 'Last Name'
-                              ),
-                              onSaved: (v) => _lastName = v
-                            ),
+                            // TextFormField(
+                            //   decoration: InputDecoration(
+                            //     labelText: 'First Name'
+                            //   ),
+                            //   onSaved: (v) => _firstName = v
+                            // ),
+                            // TextFormField(
+                            //   decoration: InputDecoration(
+                            //     labelText: 'Last Name'
+                            //   ),
+                            //   onSaved: (v) => _lastName = v
+                            // ),
                             TextFormField(
                               keyboardType: TextInputType.phone,
                               decoration: InputDecoration(
                                 labelText: 'Mobile Number'
                               ),
-                              onSaved: (v) => _mobileNumber = v
+                              onSaved: (v) => _mobileNumber = v.trim(),
+                              validator: (v){
+                                String mobile = v.trim();
+                                if(mobile.length == 0) return 'Required';
+                                if(
+                                  mobile.length < 11 
+                                  || mobile.length > 14 
+                                  || ((mobile.startsWith('0092')) && mobile.length != 14)
+                                  || ((mobile.startsWith('92')) && mobile.length != 12)
+                                  || (!mobile.startsWith('0092') && mobile.startsWith('0') && mobile.length > 11)
+                                ) return 'Invalid Mobile Number';
+                                return null;
+                              },
                             ),
                             TextFormField(
                               obscureText: _hidePass,
@@ -102,7 +162,17 @@ class _SignUpState extends State<SignUp> {
                               onSaved: (v) => _password = v
                             ),
 
-                            SizedBox(height: 20),
+                            _signupErr ? Container(
+                              margin: EdgeInsets.only(top: 20),
+                              child: Center(
+                                child: Text(_signupErrMsg, style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.redAccent
+                                ),textAlign: TextAlign.center,),
+                              ),
+                            ) : Container(),
+
+                            SizedBox(height: PERCENT(screenHeight, 20)),
 
                             Container(
                               width: PERCENT(screenWidth, 60),
@@ -113,7 +183,8 @@ class _SignUpState extends State<SignUp> {
                                 borderRadius: 50.0,
                                 fontSize: 18.0,
                                 textColor: Colors.white,
-                                onPressed: _signup
+                                submitting: _submitting,
+                                onPressed: _signup,
                               ),
                             ),
 

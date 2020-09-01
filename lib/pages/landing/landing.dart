@@ -1,6 +1,9 @@
+import 'package:channab/dio/dio.dart';
 import 'package:channab/pages/auth/already_have_account_signin.dart';
+import 'package:channab/pages/auth/create_pin.dart';
 import 'package:channab/shared/button.dart';
 import 'package:channab/shared/common.dart';
+import 'package:channab/store/auth.dart';
 import 'package:channab/store/store.dart';
 import 'package:flutter/material.dart';
 
@@ -18,8 +21,20 @@ class _LandingState extends State<Landing> {
   }
 
   void _fetchAllData() async {
+    Api.initialize();
     await Store().initialize();
     setState(() => _fetchingData = false);
+
+    if(Store.isLogged()){
+      Navigator.popUntil(context, (_) => !Navigator.canPop(context));
+      if(Store.getPin() == null){
+        Navigator.pushReplacementNamed(context, '/createpin');
+      }else if(PIN == ''){
+        Navigator.pushReplacement(context, new MaterialPageRoute(builder: (context) => CreatePin(pinVerification: true,) ));
+      }else if(PIN == Store.getPin()){
+        Navigator.pushReplacementNamed(context, '/home');
+      }
+    }
   }
 
   Widget _logo(){

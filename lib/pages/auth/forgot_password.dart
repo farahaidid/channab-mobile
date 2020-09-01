@@ -1,7 +1,11 @@
+import 'dart:convert';
+
+import 'package:channab/dio/dio.dart';
 import 'package:channab/pages/auth/dont_have_account_signin%20copy.dart';
 import 'package:channab/pages/auth/otp_verification.dart';
 import 'package:channab/shared/button.dart';
 import 'package:channab/shared/common.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 class ForgotPassword extends StatefulWidget {
@@ -13,10 +17,36 @@ class _ForgotPasswordState extends State<ForgotPassword> {
   final _formKey = GlobalKey<FormState>();
   
   String _mobileNumber = '';
+  bool _submitting = false;
+  bool _forgotPassErr = false;
+  String _forgotPassErrMsg = '';
 
   void _submit() async {
-    _formKey.currentState.save();
-    Navigator.pushReplacement(context, new MaterialPageRoute(builder: (context)=>OTP_Verification(nextRoute: '/resetpassword',) ));
+    if (_formKey.currentState.validate()) {
+      _formKey.currentState.save();
+    }
+    setState(() => _submitting = true);
+      FormData formData = new FormData.fromMap({
+        "mobile_number": _mobileNumber,
+      });
+
+      try{
+        Response res = await dio.post('/forgot_password/', data: formData);
+        print(res);
+        Map<String, dynamic> data = jsonDecode(res.data);
+        _forgotPassErrMsg = data['message'];
+        // if(data['status'] == 100){
+        //   _forgotPassErr = true;
+        // }else{
+          // Navigator.pushReplacement(context, new MaterialPageRoute(builder: (context)=>OTP_Verification(nextRoute: '/resetpassword',) ));
+        // }
+      }catch(e){
+        print('SIGNUP_ERROR');
+        print(e.message);
+        _forgotPassErr = true;
+        _forgotPassErrMsg = 'Something went wrong! Please try again later.';
+      }
+      setState(() => _submitting = false);
   }
   @override
   Widget build(BuildContext context) {
@@ -36,9 +66,6 @@ class _ForgotPasswordState extends State<ForgotPassword> {
         ),
       ),
       body: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).primaryColor,
-        ),
         child: Column(
           children: [
             Expanded(
@@ -47,6 +74,9 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                   children: [
                     Container(
                       width: screenWidth,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).primaryColor,
+                      ),
                       child: Column(
                         children: [
                           SizedBox(height: 20,),
@@ -83,6 +113,16 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                               onSaved: (v) => _mobileNumber = v
                             ),
 
+                            _forgotPassErrMsg.length > 0 ? Container(
+                              margin: EdgeInsets.only(top: 20),
+                              child: Center(
+                                child: Text(_forgotPassErrMsg, style: TextStyle(
+                                  fontSize: 14,
+                                  // color: Colors.redAccent
+                                ),textAlign: TextAlign.center,),
+                              ),
+                            ) : Container(),
+
                             SizedBox(height: PERCENT(screenHeight, 20)),
 
                             Container(
@@ -94,6 +134,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                                 borderRadius: 50.0,
                                 fontSize: 18.0,
                                 textColor: Colors.white,
+                                submitting: _submitting,
                                 onPressed: _submit
                               ),
                             ),

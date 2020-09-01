@@ -5,21 +5,27 @@ import 'package:channab/pages/auth/otp_verification.dart';
 import 'package:channab/pages/widgets/pin.dart';
 import 'package:channab/shared/button.dart';
 import 'package:channab/shared/common.dart';
+import 'package:channab/store/auth.dart';
+import 'package:channab/store/store.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 class CreatePin extends StatefulWidget {
+  bool pinVerification;
+  CreatePin({pinVerification = false}){
+    this.pinVerification = pinVerification;
+  }
   @override
   _CreatePinState createState() => _CreatePinState();
 }
 
 class _CreatePinState extends State<CreatePin> {
-  String _title = 'Create Pin';
 
   String _pin = '';
   String _cPin = '';
   bool _showConfirmPin = false;
-  bool _pinDidNotMatch = false;
+  bool _pinError = false;
+  String _pinErrMsg = '';
 
   final PIN_LENGTH = 4;
 
@@ -43,14 +49,27 @@ class _CreatePinState extends State<CreatePin> {
       }else{
         _pin = p;
       }
-      if(_pin.length == PIN_LENGTH && !_showConfirmPin){
+      if(_pin.length == PIN_LENGTH && widget.pinVerification){
+        if(_pin == Store.getPin()){
+          Navigator.popUntil(context, (_) => !Navigator.canPop(context));
+          Navigator.pushReplacementNamed(context, '/home');
+        }else{
+          _pin = '';
+          _pinError = true;
+          _pinErrMsg = 'Pin Did not match!';
+        }
+      }
+      else if(_pin.length == PIN_LENGTH && !_showConfirmPin){
         _showConfirmPin = true;
-        _title = 'Confirm Pin';
       }else if(_cPin.length == PIN_LENGTH){
         if(_pin == _cPin){
-
+          Store.setPin(_pin);
+          Navigator.popUntil(context, (_) => !Navigator.canPop(context));
+          Navigator.pushReplacementNamed(context, '/home');
         }else{
-          _pinDidNotMatch = true;
+          _cPin = '';
+          _pinError = true;
+          _pinErrMsg = 'Pin Did not match!';
         }
       }
     });
@@ -79,7 +98,9 @@ class _CreatePinState extends State<CreatePin> {
     final screenWidth = MediaQuery.of(context).size.width;
     return Scaffold(
       appBar: AppBar(
-        title: Text(_title, style: TextStyle(
+        title: Text(
+          _showConfirmPin ? 'Confirm Pin' : widget.pinVerification ? 'Verify Pin' : 'Create Pin'
+          , style: TextStyle(
           fontSize: 32,
           color: Colors.white
         ),),
@@ -91,9 +112,8 @@ class _CreatePinState extends State<CreatePin> {
             setState(() {
               _showConfirmPin = false;
               _cPin = '';
-              _title = 'Create Pin';
               _pin = '';
-              _pinDidNotMatch = false;
+              _pinError = false;
             });
           },
         ) : null,
@@ -123,12 +143,12 @@ class _CreatePinState extends State<CreatePin> {
 
                           SizedBox(height: PERCENT(screenHeight, 15),),
 
-                          _pinDidNotMatch ? Padding(
+                          _pinError ? Padding(
                             padding: EdgeInsets.only(bottom: 20),
-                            child: Text('Pin Did not match!', style: TextStyle(
+                            child: Text( _pinErrMsg, style: TextStyle(
                               fontSize: 18,
                               color: Colors.white
-                            ),),
+                            ),textAlign: TextAlign.center,),
                           ) : Container(),
 
                         ],
