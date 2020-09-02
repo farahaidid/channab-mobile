@@ -31,6 +31,13 @@ class _HomeState extends State<Home> {
               },
             ),
             ListTile(
+              leading: Icon(Icons.list),
+              title: Text('Animal List', style: TextStyle(fontSize: 15.0) ),
+              onTap: () {
+                Navigator.pushNamed(context, '/animal_list');
+              },
+            ),
+            ListTile(
               leading: Icon(Icons.exit_to_app),
               title: Text('Logout', style: TextStyle(fontSize: 15.0) ),
               onTap: () {

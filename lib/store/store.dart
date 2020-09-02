@@ -42,8 +42,8 @@ class Store{
   }
 
   static bool isLogged(){
-    if(_pref.getBool(IS_LOGGED_KEY) == null) return false;
-    return _pref.getBool(IS_LOGGED_KEY);
+    if(_pref.getBool(IS_LOGGED_KEY) == null && _pref.getString(TOKEN_KEY) == null) return false;
+    return _pref.getBool(IS_LOGGED_KEY) == true && _pref.getString(TOKEN_KEY) != null && _pref.getString(TOKEN_KEY).length > 5;
   }
   static void setIsLogged(p){
     _pref.setBool(IS_LOGGED_KEY, p);
