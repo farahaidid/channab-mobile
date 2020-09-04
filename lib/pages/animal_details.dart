@@ -1,7 +1,9 @@
 import 'dart:convert';
 
 import 'package:channab/dio/dio.dart';
+import 'package:channab/shared/button.dart';
 import 'package:channab/shared/common.dart';
+import 'package:channab/store/store.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
@@ -20,6 +22,10 @@ class AnimalDetails extends StatefulWidget {
 class _AnimalDetailsState extends State<AnimalDetails> {
   bool _fetchingData = true;
   Map<String,dynamic> _animalDetails;
+  List<dynamic> _allAnimal = [];
+  List<dynamic> _allMaleAnimal = [];
+  List<dynamic> _allFemaleAnimal = [];
+  List<dynamic> _multiSelectableAnimals = [];
   List<Map<String,dynamic>> _menu = [
     {'text':'Health', 'value': 'health'},
     {'text':'Family', 'value': 'family'},
@@ -30,6 +36,24 @@ class _AnimalDetailsState extends State<AnimalDetails> {
 
   String _selectedMenu = 'health';
   String _filterMilkingBy = 'complete';
+  final _milkingForm = GlobalKey<FormState>();
+  final _healthForm = GlobalKey<FormState>();
+  final _familyForm = GlobalKey<FormState>();
+  bool _submittingMilkingForm = false;
+  Map<String, dynamic> _milkingFormData = {
+    'morning_milk': '',
+    'evening_milk': '',
+  };
+  Map<String, dynamic> _healthFormData = {
+    'title_health': '',
+    'cost': '',
+    'description': ''
+  };
+  Map<String, dynamic> _familyFormData = {
+    'male_parent': -1,
+    'female_parent': -1,
+    'child_select': []
+  };
 
   initState(){
     super.initState();
@@ -37,12 +61,41 @@ class _AnimalDetailsState extends State<AnimalDetails> {
   }
 
   void _fetchAllData() async {
+    List<dynamic> _initAnimal = [{
+      'id': -1,
+      'animal_tag': '-----',
+    }];
+    _allAnimal = _initAnimal + Store.getAllAnimal();
+    _allMaleAnimal = _initAnimal + Store.getAllAnimal().where((element) => element['gender'] == 'Male').toList();
+    _allFemaleAnimal = _initAnimal + Store.getAllAnimal().where((element) => element['gender'] == 'Female').toList();
     await _fetchAnimalDetails();
+    if(_animalDetails['female_parents_of_animals']['id'] != null){
+      _familyFormData['female_parent'] = _animalDetails['female_parents_of_animals']['id'];
+    }
+    if(_animalDetails['male_parents_animal']['id'] != null){
+      _familyFormData['male_parent'] = _animalDetails['male_parents_animal']['id'];
+    }
+    _setMultiSelectableAnimalList();
     setState(() => _fetchingData = false);
+  }
+
+  _setMultiSelectableAnimalList(){
+    _multiSelectableAnimals = Store.getAllAnimal().map((animal) {
+      bool selected = false;
+      var ch = _animalDetails['child_already_select'].singleWhere((a)=>a['id'] == animal['id'], orElse: ()=>null);
+      if(ch != null) selected = true;
+      return {
+        'id': animal['id'],
+        'animal_tag': animal['animal_tag'],
+        'gender': animal['gender'],
+        'selected': selected,
+      };
+    }).toList();
   }
 
   void _fetchAnimalDetails () async {
     try{
+      print(widget.id);
       Response res = await dio.get('/view_particular_element/?product_id=' + widget.id.toString());
       Map<String, dynamic> data = jsonDecode(res.data);
       _animalDetails = data;
@@ -51,8 +104,34 @@ class _AnimalDetailsState extends State<AnimalDetails> {
       print('GET_ANIMAL_DETAILS_ERROR');
       print(e);
     }
-    
   }
+
+  void _showDialogForm(widget){
+    showGeneralDialog(
+      barrierLabel: "Label",
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.5),
+      transitionDuration: Duration(milliseconds: 500),
+      context: context,
+      pageBuilder: (context, anim1, anim2) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Align(
+              alignment: Alignment.topCenter,
+              child: widget
+            );
+          },
+        );
+      },
+      transitionBuilder: (context, anim1, anim2, child) {
+        return SlideTransition(
+          position: Tween(begin: Offset(0, -1), end: Offset(0, 0)).animate(anim1),
+          child: child,
+        );
+      },
+    );           
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -156,7 +235,7 @@ class _AnimalDetailsState extends State<AnimalDetails> {
           SizedBox(height: 20,),
 
           Container(margin: EdgeInsets.symmetric(horizontal: 10), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Container(
+            InkWell(child: Container(
               height: 40, 
               width: 40, 
               decoration: BoxDecoration(
@@ -164,7 +243,533 @@ class _AnimalDetailsState extends State<AnimalDetails> {
                 borderRadius: BorderRadius.circular(40),
               ),
               child: Center(child: SvgPicture.asset('lib/assets/svg/plus.svg')),
-            ),
+            ),onTap: (){
+              showGeneralDialog(
+                barrierLabel: "Label",
+                barrierDismissible: true,
+                barrierColor: Colors.black.withOpacity(0.5),
+                transitionDuration: Duration(milliseconds: 500),
+                context: context,
+                pageBuilder: (context, anim1, anim2) {
+                  return StatefulBuilder(
+                    builder: (context, setState) {
+                      return Align(
+                        alignment: Alignment.topCenter,
+                        child: Scaffold(backgroundColor: Colors.transparent, body: ListView(children: [ 
+                            Container(
+                              width: MediaQuery.of(context).size.width,
+                              height: _selectedMenu == 'health' ? 530 : 430,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                              ),
+                              child: Column(children: [Expanded(child: ListView(children: [
+                                SizedBox(height: 50),
+                                
+                                Container(padding: EdgeInsets.symmetric(horizontal: 20), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.center, children: [
+                                  Text(
+                                    _selectedMenu == 'health' ? 'Add Health' : _selectedMenu == 'family' ? 'Add Family' : 'Add Milk'
+                                    , style: TextStyle(
+                                    fontSize: 18,
+                                    color: Color.fromRGBO(42, 60, 91, 1.0),
+                                    decoration: TextDecoration.none,
+                                  ),),
+                                  InkWell(child: Container(
+                                    height: 18,
+                                    width: 18,
+                                    child: Center(child: SvgPicture.asset('lib/assets/svg/cross.svg',),)
+                                  ),onTap: _submittingMilkingForm ? null : () => Navigator.pop(context),),
+                                ],),),
+
+                                SizedBox(height: 10),
+                                Divider(height: 20,),
+                                SizedBox(height: 10),
+
+                                _selectedMenu == 'health' ? Form(key: _healthForm, child: Container(padding: EdgeInsets.symmetric(horizontal: 20),child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                  Text('Title', style: TextStyle(
+                                    fontSize: 16,
+                                    color: Color.fromRGBO(42, 60, 91, 1.0),
+                                    decoration: TextDecoration.none,
+                                  ),textAlign: TextAlign.left,),
+                                  TextFormField(
+                                    style: TextStyle(
+                                      fontSize: 15
+                                    ),
+                                    decoration: InputDecoration(
+                                      hintText: 'Title',
+                                      contentPadding: new EdgeInsets.symmetric(vertical: 10.0, horizontal: 10.0),
+                                      isDense: true,
+                                      fillColor: Colors.white,
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10.0),
+                                        borderSide: BorderSide(
+                                          color: Color.fromRGBO(229, 229, 229, 1.0),
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10.0),
+                                        borderSide: BorderSide(
+                                          color: Color.fromRGBO(229, 229, 229, 1.0),
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                    ),
+                                    onSaved: (val) => _healthFormData['title_health'] = val.trim(),
+                                    validator: (value) => value.isEmpty ? 'Required' : null,
+                                  ),
+                                  SizedBox(height: 20),
+                                  Text('Health Cost', style: TextStyle(
+                                    fontSize: 16,
+                                    color: Color.fromRGBO(42, 60, 91, 1.0),
+                                    decoration: TextDecoration.none,
+                                  ),textAlign: TextAlign.left,),
+                                  TextFormField(
+                                    keyboardType: TextInputType.number,
+                                    style: TextStyle(
+                                      fontSize: 15
+                                    ),
+                                    decoration: InputDecoration(
+                                      hintText: 'Health Cost',
+                                      contentPadding: new EdgeInsets.symmetric(vertical: 10.0, horizontal: 10.0),
+                                      isDense: true,
+                                      fillColor: Colors.white,
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10.0),
+                                        borderSide: BorderSide(
+                                          color: Color.fromRGBO(229, 229, 229, 1.0),
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10.0),
+                                        borderSide: BorderSide(
+                                          color: Color.fromRGBO(229, 229, 229, 1.0),
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                    ),
+                                    onSaved: (val) => _healthFormData['cost'] = val.trim(),
+                                    validator: (value) => value.isEmpty ? 'Required' : null,
+                                  ),
+                                  SizedBox(height: 20),
+                                  Text('Add Content', style: TextStyle(
+                                    fontSize: 16,
+                                    color: Color.fromRGBO(42, 60, 91, 1.0),
+                                    decoration: TextDecoration.none,
+                                  ),textAlign: TextAlign.left,),
+                                  TextFormField(
+                                    style: TextStyle(
+                                      fontSize: 15
+                                    ),
+                                    maxLines: 3,
+                                    decoration: InputDecoration(
+                                      hintText: 'Add Content',
+                                      contentPadding: new EdgeInsets.symmetric(vertical: 10.0, horizontal: 10.0),
+                                      isDense: true,
+                                      fillColor: Colors.white,
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10.0),
+                                        borderSide: BorderSide(
+                                          color: Color.fromRGBO(229, 229, 229, 1.0),
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10.0),
+                                        borderSide: BorderSide(
+                                          color: Color.fromRGBO(229, 229, 229, 1.0),
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                    ),
+                                    onSaved: (val) => _healthFormData['description'] = val.trim(),
+                                  ),
+                                  SizedBox(height: 20),
+
+                                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                                    SizedBox(
+                                      width: PERCENT(MediaQuery.of(context).size.width, 70),
+                                      child: BUTTON(
+                                        text: 'Save Information',
+                                        fontSize: 18.0,
+                                        borderRadius: 7.0,
+                                        color: Theme.of(context).primaryColor,
+                                        textColor: Colors.white,
+                                        submitting: _submittingMilkingForm,
+                                        onPressed: () async {
+                                          if (_healthForm.currentState.validate()) {
+                                            setState(() => _submittingMilkingForm = true);
+                                            _healthForm.currentState.save();
+                                            try{
+                                              FormData formData = new FormData.fromMap({
+                                                "animal_particular_id": widget.id,
+                                                "title_health": _healthFormData['title_health'],
+                                                "cost": double.parse(_healthFormData['cost']).toDouble(),
+                                                "description": _healthFormData['description'],
+                                              });
+                                              print(formData.fields.toString());
+                                              Response res = await dio.post('/health_popup/', data: formData);
+                                              print(res);
+                                              await _fetchAnimalDetails();
+                                              Navigator.pop(context);
+                                            }catch(e){
+                                              print('ADD_HEALTH_ERROR');
+                                              print(e);
+                                            }
+                                            setState(() => _submittingMilkingForm = false);
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  ],),
+
+                                ],),),) 
+                                : _selectedMenu == 'family' ?
+                                Form(key: _familyForm, child: Container(padding: EdgeInsets.symmetric(horizontal: 20),child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                  Text('Male Parent', style: TextStyle(
+                                    fontSize: 16,
+                                    color: Color.fromRGBO(42, 60, 91, 1.0),
+                                    decoration: TextDecoration.none,
+                                  ),textAlign: TextAlign.left,),
+                                  Container(
+                                    child: DropdownButtonHideUnderline(
+                                      child: ButtonTheme(
+                                        alignedDropdown: true,
+                                        child: DropdownButtonFormField<int>(
+                                          decoration: InputDecoration(
+                                            contentPadding: new EdgeInsets.symmetric(vertical: 10.0, horizontal: 10.0),
+                                            isDense: true,
+                                            fillColor: Colors.white,
+                                            focusedBorder: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(10.0),
+                                              borderSide: BorderSide(
+                                                color: Color.fromRGBO(229, 229, 229, 1.0),
+                                                width: 1.5,
+                                              ),
+                                            ),
+                                            enabledBorder: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(10.0),
+                                              borderSide: BorderSide(
+                                                color: Color.fromRGBO(229, 229, 229, 1.0),
+                                                width: 1.5,
+                                              ),
+                                            ),
+                                          ),
+                                          value: _familyFormData['male_parent'],
+                                          items: _allMaleAnimal.map((x) => DropdownMenuItem<int>(
+                                            value: x['id'],
+                                            child: Text(
+                                              x['animal_tag'],
+                                              textAlign: TextAlign.left,
+                                            ),
+                                          ))
+                                          .toList(),
+                                          onChanged: (val) {
+                                            _familyFormData['male_parent'] = val;
+                                          },
+                                          validator: (val) => val == -1 ? 'Required' : null,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(height: 20,),
+                                  Text('Female Parent', style: TextStyle(
+                                    fontSize: 16,
+                                    color: Color.fromRGBO(42, 60, 91, 1.0),
+                                    decoration: TextDecoration.none,
+                                  ),textAlign: TextAlign.left,),
+                                  Container(
+                                    child: DropdownButtonHideUnderline(
+                                      child: ButtonTheme(
+                                        alignedDropdown: true,
+                                        child: DropdownButtonFormField<int>(
+                                          decoration: InputDecoration(
+                                            contentPadding: new EdgeInsets.symmetric(vertical: 10.0, horizontal: 10.0),
+                                            isDense: true,
+                                            fillColor: Colors.white,
+                                            focusedBorder: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(10.0),
+                                              borderSide: BorderSide(
+                                                color: Color.fromRGBO(229, 229, 229, 1.0),
+                                                width: 1.5,
+                                              ),
+                                            ),
+                                            enabledBorder: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(10.0),
+                                              borderSide: BorderSide(
+                                                color: Color.fromRGBO(229, 229, 229, 1.0),
+                                                width: 1.5,
+                                              ),
+                                            ),
+                                          ),
+                                          value: _familyFormData['female_parent'],
+                                          items: _allFemaleAnimal.map((x) => DropdownMenuItem<int>(
+                                            value: x['id'],
+                                            child: Text(
+                                              x['animal_tag'],
+                                              textAlign: TextAlign.left,
+                                            ),
+                                          ))
+                                          .toList(),
+                                          onChanged: (val) {
+                                            _familyFormData['female_parent'] = val;
+                                          },
+                                          validator: (val) => val == -1 ? 'Required' : null,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(height: 20),
+                                  Text('Evening Milk', style: TextStyle(
+                                    fontSize: 16,
+                                    color: Color.fromRGBO(42, 60, 91, 1.0),
+                                    decoration: TextDecoration.none,
+                                  ),textAlign: TextAlign.left,),
+                                  Container(
+                                    width: MediaQuery.of(context).size.width - 40,
+                                    padding: EdgeInsets.only(left: 20, top: 10, bottom: 10),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(10.0),
+                                      border: Border.all(
+                                        color: Color.fromRGBO(229, 229, 229, 1.0),
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    child: InkWell(
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text('Please Select'),
+                                          Icon(Icons.arrow_drop_down)
+                                        ],
+                                      ),
+                                      onTap: () {
+                                        showDialog(
+                                          context: context,
+                                          builder: (context) => StatefulBuilder(builder: (context, setState) => Center(
+                                            child: Container(
+                                              margin: EdgeInsets.symmetric(horizontal: (MediaQuery.of(context).size.width * 10) / 100),
+                                              child: Material(
+                                                borderRadius: BorderRadius.circular(10.0),
+                                                child: Container(
+                                                  child: Container(
+                                                    padding: EdgeInsets.all(10.0),
+                                                    child: Column(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: <Widget>[
+                                                        Container(
+                                                          height: MediaQuery.of(context).size.height - 400,
+                                                          child: SingleChildScrollView(
+                                                            child: Column(children: _multiSelectableAnimals.asMap().map((index, animal) => MapEntry(index, Container(
+                                                              child: Row(children: [
+                                                                Checkbox(
+                                                                  value: animal['selected'],
+                                                                  onChanged: (v) => setState(() => _multiSelectableAnimals[index]['selected'] = !_multiSelectableAnimals[index]['selected']),
+                                                                ),
+                                                                Flexible(
+                                                                  child: Text(
+                                                                    animal['animal_tag'],
+                                                                    style: TextStyle(fontSize: 16.0),
+                                                                  ),
+                                                                ),
+                                                              ],),
+                                                            ),),).values.toList(),),
+                                                          ),
+                                                        ),
+                                                        SizedBox(
+                                                          height: 30.0,
+                                                        ),
+                                                        Center(
+                                                          child: BUTTON(
+                                                            text: 'DONE',
+                                                            textColor: Theme.of(context).primaryColor,
+                                                            color: Colors.transparent,
+                                                            fontSize: 18.0,
+                                                            borderRadius: 5.0,
+                                                            elevation: 0.0, 
+                                                            onPressed: () {
+                                                              var selected = _multiSelectableAnimals.where((element) => element['selected']).toList();
+                                                              _familyFormData['child_select'] = selected.map((e) => e['id']).toList();
+                                                              Navigator.pop(context);
+                                                            }),
+                                                        )
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  SizedBox(height: 20),
+
+                                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                                    SizedBox(
+                                      width: PERCENT(MediaQuery.of(context).size.width, 70),
+                                      child: BUTTON(
+                                        text: 'Save Information',
+                                        fontSize: 18.0,
+                                        borderRadius: 7.0,
+                                        color: Theme.of(context).primaryColor,
+                                        textColor: Colors.white,
+                                        submitting: _submittingMilkingForm,
+                                        onPressed: () async {
+                                          if (_familyForm.currentState.validate()) {
+                                            setState(() => _submittingMilkingForm = true);
+                                            _familyForm.currentState.save();
+                                            try{
+                                              FormData formData = new FormData.fromMap({
+                                                "family_particular_id": widget.id,
+                                                "male_parent": _familyFormData['male_parent'],
+                                                "female_parent": _familyFormData['female_parent'],
+                                                "child_select": _familyFormData['child_select'].toString(),
+                                              });
+                                              print(formData.fields.toString());
+                                              Response res = await dio.post('/add_child_api/', data: formData);
+                                              await _fetchAnimalDetails();
+                                              _setMultiSelectableAnimalList();
+                                              print(res);
+                                              Navigator.pop(context);
+                                            }catch(e){
+                                              print('ADD_FAMILY_ERROR');
+                                              print(e);
+                                            }
+                                            setState(() => _submittingMilkingForm = false);
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  ],),
+
+                                ],),),):
+                                Form(key: _milkingForm, child: Container(padding: EdgeInsets.symmetric(horizontal: 20),child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                  Text('Morning Milk', style: TextStyle(
+                                    fontSize: 16,
+                                    color: Color.fromRGBO(42, 60, 91, 1.0),
+                                    decoration: TextDecoration.none,
+                                  ),textAlign: TextAlign.left,),
+                                  TextFormField(
+                                    keyboardType: TextInputType.number,
+                                    style: TextStyle(
+                                      fontSize: 15
+                                    ),
+                                    decoration: InputDecoration(
+                                      hintText: 'Morning Milk',
+                                      contentPadding: new EdgeInsets.symmetric(vertical: 10.0, horizontal: 10.0),
+                                      isDense: true,
+                                      fillColor: Colors.white,
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10.0),
+                                        borderSide: BorderSide(
+                                          color: Color.fromRGBO(229, 229, 229, 1.0),
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10.0),
+                                        borderSide: BorderSide(
+                                          color: Color.fromRGBO(229, 229, 229, 1.0),
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                    ),
+                                    onSaved: (val) => _milkingFormData['morning_milk'] = val.trim(),
+                                    validator: (value) => value.isEmpty ? 'Required' : null,
+                                  ),
+                                  SizedBox(height: 20),
+                                  Text('Evening Milk', style: TextStyle(
+                                    fontSize: 16,
+                                    color: Color.fromRGBO(42, 60, 91, 1.0),
+                                    decoration: TextDecoration.none,
+                                  ),textAlign: TextAlign.left,),
+                                  TextFormField(
+                                    keyboardType: TextInputType.number,
+                                    style: TextStyle(
+                                      fontSize: 15
+                                    ),
+                                    decoration: InputDecoration(
+                                      hintText: 'Evening Milk',
+                                      contentPadding: new EdgeInsets.symmetric(vertical: 10.0, horizontal: 10.0),
+                                      isDense: true,
+                                      fillColor: Colors.white,
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10.0),
+                                        borderSide: BorderSide(
+                                          color: Color.fromRGBO(229, 229, 229, 1.0),
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10.0),
+                                        borderSide: BorderSide(
+                                          color: Color.fromRGBO(229, 229, 229, 1.0),
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                    ),
+                                    onSaved: (val) => _milkingFormData['evening_milk'] = val.trim(),
+                                    validator: (value) => value.isEmpty ? 'Required' : null,
+                                  ),
+                                  SizedBox(height: 20),
+
+                                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                                    SizedBox(
+                                      width: PERCENT(MediaQuery.of(context).size.width, 70),
+                                      child: BUTTON(
+                                        text: 'Save Information',
+                                        fontSize: 18.0,
+                                        borderRadius: 7.0,
+                                        color: Theme.of(context).primaryColor,
+                                        textColor: Colors.white,
+                                        submitting: _submittingMilkingForm,
+                                        onPressed: () async {
+                                          if (_milkingForm.currentState.validate()) {
+                                            setState(() => _submittingMilkingForm = true);
+                                            _milkingForm.currentState.save();
+                                            try{
+                                              FormData formData = new FormData.fromMap({
+                                                "animal_particular_id": widget.id,
+                                                "morning_time": double.parse(_milkingFormData['morning_milk']).toDouble(),
+                                                "evening_time": double.parse(_milkingFormData['evening_milk']).toDouble(),
+                                              });
+                                              Response res = await dio.post('/milking_popup/', data: formData);
+                                              await _fetchAnimalDetails();
+                                              Navigator.pop(context);
+                                            }catch(e){
+                                              print('ADD_MILK_ERROR');
+                                              print(e);
+                                            }
+                                            setState(() => _submittingMilkingForm = false);
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  ],),
+
+                                ],),),),
+
+                                SizedBox(height: 50),
+                              ],),),],),
+                            ),
+                            // InkWell(child: Container(height: MediaQuery.of(context).size.height > 430 ? MediaQuery.of(context).size.height-430 : 0, width: MediaQuery.of(context).size.width,),onTap: () => Navigator.pop(context),),
+                            ],
+                          ),
+                        )
+                      );
+                    },
+                  );
+                },
+                transitionBuilder: (context, anim1, anim2, child) {
+                  return SlideTransition(
+                    position: Tween(begin: Offset(0, -1), end: Offset(0, 0)).animate(anim1),
+                    child: child,
+                  );
+                },
+              ).then((value) => setState((){}));
+            },),
             Container(
               height: 40, 
               width: 40, 
@@ -288,7 +893,7 @@ class _AnimalDetailsState extends State<AnimalDetails> {
               color: Color.fromRGBO(42, 60, 91, 1.0),
             ),),
             SizedBox(height: 20,),
-          ] + _animalDetails['male_parents_animal']['animal_tag'] == null ? [] : [_animalDetails['male_parents_animal'] , _animalDetails['female_parents_of_animals']].map<Widget>((parent) =>
+          ] + [_animalDetails['male_parents_animal'] , _animalDetails['female_parents_of_animals']].map<Widget>((parent) =>
             Container(
               child: Container(
                 padding: EdgeInsets.symmetric(horizontal: 10),

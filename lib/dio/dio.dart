@@ -9,7 +9,7 @@ class Api{
     connectTimeout: 5000,
     receiveTimeout: 3000,
     headers: {
-      'x-api-key': '9944b09199c62bcf9418ad846dd0e4bbdfc6ee4b'
+      'x-api-key': '9944b09199c62bcf9418ad846dd0e4bbdfc6ee4b',
     }
   );
   static void initialize(){

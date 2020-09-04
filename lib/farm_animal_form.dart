@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:channab/dio/dio.dart';
 import 'package:channab/store/auth.dart';
 import 'package:dio/dio.dart';
 import 'package:dotted_border/dotted_border.dart';
@@ -48,13 +49,7 @@ class _FarmAnimalFormState extends State<FarmAnimalForm> {
   }
 
   void fetchCategories () async {
-    Dio dio = new Dio();
-
-    Response res = await dio.get("https://channab.com/api/all_category/", options: Options(
-      headers: {
-        "token" : TOKEN
-      }
-    ));
+    Response res = await dio.get("/all_category/",);
 
     Map<String, dynamic> data = jsonDecode(res.data);
 

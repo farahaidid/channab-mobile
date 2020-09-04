@@ -8,6 +8,8 @@ final IS_LOGGED_KEY = 'isLogged';
 final TOKEN_KEY = 'token';
 final USER_INFO = 'user_info';
 
+List<dynamic> _allAnimal = [];
+
 
 class Store{
   static Store _store;
@@ -55,6 +57,13 @@ class Store{
   static Map<String,dynamic> getUserInfo(){
     if(_pref.getString(USER_INFO) == null) return null;
     return jsonDecode(_pref.getString(USER_INFO));
+  }
+
+  static void setAllAnimal(List<dynamic> p){
+    _allAnimal = p;
+  }
+  static List<dynamic> getAllAnimal(){
+    return _allAnimal;
   }
 
 
