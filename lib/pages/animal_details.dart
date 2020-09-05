@@ -5,8 +5,10 @@ import 'package:channab/shared/button.dart';
 import 'package:channab/shared/common.dart';
 import 'package:channab/store/store.dart';
 import 'package:dio/dio.dart';
+import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:timeline_tile/timeline_tile.dart';
 import 'package:intl/intl.dart';
 
@@ -39,6 +41,7 @@ class _AnimalDetailsState extends State<AnimalDetails> {
   final _milkingForm = GlobalKey<FormState>();
   final _healthForm = GlobalKey<FormState>();
   final _familyForm = GlobalKey<FormState>();
+  final _descriptionForm = GlobalKey<FormState>();
   bool _submittingMilkingForm = false;
   Map<String, dynamic> _milkingFormData = {
     'morning_milk': '',
@@ -53,6 +56,12 @@ class _AnimalDetailsState extends State<AnimalDetails> {
     'male_parent': -1,
     'female_parent': -1,
     'child_select': []
+  };
+  Map<String, dynamic> _galleryFormData = {
+    'image': null,
+  };
+  Map<String, dynamic> _descriptionFormData = {
+    'description': '',
   };
 
   initState(){
@@ -258,7 +267,7 @@ class _AnimalDetailsState extends State<AnimalDetails> {
                         child: Scaffold(backgroundColor: Colors.transparent, body: ListView(children: [ 
                             Container(
                               width: MediaQuery.of(context).size.width,
-                              height: _selectedMenu == 'health' ? 530 : 430,
+                              height: _selectedMenu == 'health' ? 530 : _selectedMenu == 'family' ? 530 : _selectedMenu == 'description' ? 330 : 430,
                               decoration: BoxDecoration(
                                 color: Colors.white,
                               ),
@@ -267,7 +276,11 @@ class _AnimalDetailsState extends State<AnimalDetails> {
                                 
                                 Container(padding: EdgeInsets.symmetric(horizontal: 20), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.center, children: [
                                   Text(
-                                    _selectedMenu == 'health' ? 'Add Health' : _selectedMenu == 'family' ? 'Add Family' : 'Add Milk'
+                                    _selectedMenu == 'health' ? 'Add Health' 
+                                    : _selectedMenu == 'family' ? 'Add Family' 
+                                    : _selectedMenu == 'gallery' ? 'Add Image' 
+                                    : _selectedMenu == 'description' ? 'Add Description' 
+                                    : 'Add Milk'
                                     , style: TextStyle(
                                     fontSize: 18,
                                     color: Color.fromRGBO(42, 60, 91, 1.0),
@@ -404,7 +417,7 @@ class _AnimalDetailsState extends State<AnimalDetails> {
                                               FormData formData = new FormData.fromMap({
                                                 "animal_particular_id": widget.id,
                                                 "title_health": _healthFormData['title_health'],
-                                                "cost": double.parse(_healthFormData['cost']).toDouble(),
+                                                "cost": _healthFormData['cost'],
                                                 "description": _healthFormData['description'],
                                               });
                                               print(formData.fields.toString());
@@ -520,7 +533,7 @@ class _AnimalDetailsState extends State<AnimalDetails> {
                                     ),
                                   ),
                                   SizedBox(height: 20),
-                                  Text('Evening Milk', style: TextStyle(
+                                  Text('Select Child', style: TextStyle(
                                     fontSize: 16,
                                     color: Color.fromRGBO(42, 60, 91, 1.0),
                                     decoration: TextDecoration.none,
@@ -643,75 +656,48 @@ class _AnimalDetailsState extends State<AnimalDetails> {
                                       ),
                                     ),
                                   ],),
+                                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                                    SizedBox(
+                                      width: PERCENT(MediaQuery.of(context).size.width, 60),
+                                      child: BUTTON(
+                                        text: 'Add Animal',
+                                        fontSize: 18.0,
+                                        borderRadius: 7.0,
+                                        color: Theme.of(context).primaryColor,
+                                        textColor: Colors.white,
+                                        submitting: _submittingMilkingForm,
+                                        onPressed: () => Navigator.pushReplacementNamed(context, '/farm_animal_form'),
+                                      ),
+                                    ),
+                                  ],),
 
-                                ],),),):
-                                Form(key: _milkingForm, child: Container(padding: EdgeInsets.symmetric(horizontal: 20),child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                  Text('Morning Milk', style: TextStyle(
-                                    fontSize: 16,
-                                    color: Color.fromRGBO(42, 60, 91, 1.0),
-                                    decoration: TextDecoration.none,
-                                  ),textAlign: TextAlign.left,),
-                                  TextFormField(
-                                    keyboardType: TextInputType.number,
-                                    style: TextStyle(
-                                      fontSize: 15
-                                    ),
-                                    decoration: InputDecoration(
-                                      hintText: 'Morning Milk',
-                                      contentPadding: new EdgeInsets.symmetric(vertical: 10.0, horizontal: 10.0),
-                                      isDense: true,
-                                      fillColor: Colors.white,
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(10.0),
-                                        borderSide: BorderSide(
-                                          color: Color.fromRGBO(229, 229, 229, 1.0),
-                                          width: 1.5,
-                                        ),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(10.0),
-                                        borderSide: BorderSide(
-                                          color: Color.fromRGBO(229, 229, 229, 1.0),
-                                          width: 1.5,
+                                ],),),)
+                                : _selectedMenu == 'gallery' ?
+                                Container(padding: EdgeInsets.symmetric(horizontal: 20),child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                  InkWell(
+                                    child: DottedBorder(
+                                      color: Theme.of(context).primaryColor,
+                                      borderType: BorderType.RRect,
+                                      radius: Radius.circular(5),
+                                      child: Container(
+                                        height: 200,
+                                        width: MediaQuery.of(context).size.width - 40,
+                                        child: _galleryFormData['image'] != null ? Image.file(_galleryFormData['image'],) : Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          crossAxisAlignment: CrossAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.cloud_upload, color: Theme.of(context).primaryColor,),
+                                            Text('Image Upload', style: TextStyle(color: Theme.of(context).primaryColor,),)
+                                          ],
                                         ),
                                       ),
                                     ),
-                                    onSaved: (val) => _milkingFormData['morning_milk'] = val.trim(),
-                                    validator: (value) => value.isEmpty ? 'Required' : null,
-                                  ),
-                                  SizedBox(height: 20),
-                                  Text('Evening Milk', style: TextStyle(
-                                    fontSize: 16,
-                                    color: Color.fromRGBO(42, 60, 91, 1.0),
-                                    decoration: TextDecoration.none,
-                                  ),textAlign: TextAlign.left,),
-                                  TextFormField(
-                                    keyboardType: TextInputType.number,
-                                    style: TextStyle(
-                                      fontSize: 15
-                                    ),
-                                    decoration: InputDecoration(
-                                      hintText: 'Evening Milk',
-                                      contentPadding: new EdgeInsets.symmetric(vertical: 10.0, horizontal: 10.0),
-                                      isDense: true,
-                                      fillColor: Colors.white,
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(10.0),
-                                        borderSide: BorderSide(
-                                          color: Color.fromRGBO(229, 229, 229, 1.0),
-                                          width: 1.5,
-                                        ),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(10.0),
-                                        borderSide: BorderSide(
-                                          color: Color.fromRGBO(229, 229, 229, 1.0),
-                                          width: 1.5,
-                                        ),
-                                      ),
-                                    ),
-                                    onSaved: (val) => _milkingFormData['evening_milk'] = val.trim(),
-                                    validator: (value) => value.isEmpty ? 'Required' : null,
+                                    onTap: ()async{
+                                      var imageData = await pickImage(ImageSource.camera);
+                                      setState((){
+                                        _galleryFormData['image'] = imageData['file'];
+                                      });
+                                    },
                                   ),
                                   SizedBox(height: 20),
 
@@ -725,21 +711,91 @@ class _AnimalDetailsState extends State<AnimalDetails> {
                                         color: Theme.of(context).primaryColor,
                                         textColor: Colors.white,
                                         submitting: _submittingMilkingForm,
+                                        onPressed: _galleryFormData['image'] == null ? null : () async {
+                                          setState(() => _submittingMilkingForm = true);
+                                          try{
+                                            FormData formData = new FormData.fromMap({
+                                              "animal_particular_id": widget.id,
+                                              "main_image": await MultipartFile.fromFile(_galleryFormData['image'].path),
+                                            });
+                                            Response res = await dio.post('/gallery_popup/', data: formData);
+                                            await _fetchAnimalDetails();
+                                            print(res);
+                                            Navigator.pop(context);
+                                          }catch(e){
+                                            print('ADD_IMAGE_ERROR');
+                                            print(e);
+                                          }
+                                          setState(() => _submittingMilkingForm = false);
+                                        },
+                                      ),
+                                    ),
+                                  ],),
+
+                                ],),)
+                                : _selectedMenu == 'description' ?
+                                Form(key: _descriptionForm, child: Container(padding: EdgeInsets.symmetric(horizontal: 20),child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                  Text('Add Description', style: TextStyle(
+                                    fontSize: 16,
+                                    color: Color.fromRGBO(42, 60, 91, 1.0),
+                                    decoration: TextDecoration.none,
+                                  ),textAlign: TextAlign.left,),
+                                  TextFormField(
+                                    style: TextStyle(
+                                      fontSize: 15
+                                    ),
+                                    maxLines: 3,
+                                    decoration: InputDecoration(
+                                      hintText: 'Add Description',
+                                      contentPadding: new EdgeInsets.symmetric(vertical: 10.0, horizontal: 10.0),
+                                      isDense: true,
+                                      fillColor: Colors.white,
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10.0),
+                                        borderSide: BorderSide(
+                                          color: Color.fromRGBO(229, 229, 229, 1.0),
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10.0),
+                                        borderSide: BorderSide(
+                                          color: Color.fromRGBO(229, 229, 229, 1.0),
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                    ),
+                                    onSaved: (val) => _descriptionFormData['description'] = val.trim(),
+                                    validator: (val) => val.isEmpty ? 'Required' : null,
+                                  ),
+                                  SizedBox(height: 20,),
+
+                                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                                    SizedBox(
+                                      width: PERCENT(MediaQuery.of(context).size.width, 70),
+                                      child: BUTTON(
+                                        text: 'Save Information',
+                                        fontSize: 18.0,
+                                        borderRadius: 7.0,
+                                        color: Theme.of(context).primaryColor,
+                                        textColor: Colors.white,
+                                        submitting: _submittingMilkingForm,
                                         onPressed: () async {
-                                          if (_milkingForm.currentState.validate()) {
+                                          if (_descriptionForm.currentState.validate()) {
                                             setState(() => _submittingMilkingForm = true);
-                                            _milkingForm.currentState.save();
+                                            _descriptionForm.currentState.save();
                                             try{
                                               FormData formData = new FormData.fromMap({
                                                 "animal_particular_id": widget.id,
-                                                "morning_time": double.parse(_milkingFormData['morning_milk']).toDouble(),
-                                                "evening_time": double.parse(_milkingFormData['evening_milk']).toDouble(),
+                                                "description": _descriptionFormData['description'],
                                               });
-                                              Response res = await dio.post('/milking_popup/', data: formData);
+                                              Response res = await dio.post('/description_popup/', data: formData);
                                               await _fetchAnimalDetails();
+                                              _setMultiSelectableAnimalList();
+                                              print(res);
                                               Navigator.pop(context);
                                             }catch(e){
-                                              print('ADD_MILK_ERROR');
+                                              print('ADD_DESCRIPTION_ERROR');
                                               print(e);
                                             }
                                             setState(() => _submittingMilkingForm = false);
@@ -748,8 +804,9 @@ class _AnimalDetailsState extends State<AnimalDetails> {
                                       ),
                                     ),
                                   ],),
-
-                                ],),),),
+                                ],),),)
+                                
+                                : Container(),
 
                                 SizedBox(height: 50),
                               ],),),],),
