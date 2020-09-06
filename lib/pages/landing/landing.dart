@@ -27,13 +27,14 @@ class _LandingState extends State<Landing> {
 
     if(Store.isLogged()){
       Navigator.popUntil(context, (_) => !Navigator.canPop(context));
-      if(Store.getPin() == null){
-        Navigator.pushReplacementNamed(context, '/createpin');
-      }else if(PIN == ''){
-        Navigator.pushReplacement(context, new MaterialPageRoute(builder: (context) => CreatePin(pinVerification: true,) ));
-      }else if(PIN == Store.getPin()){
-        Navigator.pushReplacementNamed(context, '/home');
-      }
+      Navigator.pushReplacementNamed(context, '/home');
+      // if(Store.getPin() == null){
+      //   Navigator.pushReplacementNamed(context, '/createpin');
+      // }else if(PIN == ''){
+      //   Navigator.pushReplacement(context, new MaterialPageRoute(builder: (context) => CreatePin(pinVerification: true,) ));
+      // }else if(PIN == Store.getPin()){
+      //   Navigator.pushReplacementNamed(context, '/home');
+      // }
     }
   }
 

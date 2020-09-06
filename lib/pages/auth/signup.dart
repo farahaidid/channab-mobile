@@ -29,16 +29,16 @@ class _SignUpState extends State<SignUp> {
     if (_formKey.currentState.validate()) {
       _formKey.currentState.save();
 
-      String formattedMobileNumber = '';
-      if(_mobileNumber.startsWith('0092')){
-        formattedMobileNumber = _mobileNumber.substring(2);
-      }else if(_mobileNumber.startsWith('92')){
-        formattedMobileNumber = '92' + _mobileNumber.substring(2);
-      }else if(_mobileNumber.startsWith('0')){
-        formattedMobileNumber = '92' + _mobileNumber.substring(1);
-      }else{
-        formattedMobileNumber = _mobileNumber;
-      }
+      String formattedMobileNumber = _mobileNumber;
+      // if(_mobileNumber.startsWith('0092')){
+      //   formattedMobileNumber = _mobileNumber.substring(2);
+      // }else if(_mobileNumber.startsWith('92')){
+      //   formattedMobileNumber = '92' + _mobileNumber.substring(2);
+      // }else if(_mobileNumber.startsWith('0')){
+      //   formattedMobileNumber = '92' + _mobileNumber.substring(1);
+      // }else{
+      //   formattedMobileNumber = _mobileNumber;
+      // }
 
       print(formattedMobileNumber);
       setState(() => _submitting = true);
@@ -140,13 +140,13 @@ class _SignUpState extends State<SignUp> {
                               validator: (v){
                                 String mobile = v.trim();
                                 if(mobile.length == 0) return 'Required';
-                                if(
-                                  mobile.length < 11 
-                                  || mobile.length > 14 
-                                  || ((mobile.startsWith('0092')) && mobile.length != 14)
-                                  || ((mobile.startsWith('92')) && mobile.length != 12)
-                                  || (!mobile.startsWith('0092') && mobile.startsWith('0') && mobile.length > 11)
-                                ) return 'Invalid Mobile Number';
+                                // if(
+                                //   mobile.length < 11 
+                                //   || mobile.length > 14 
+                                //   || ((mobile.startsWith('0092')) && mobile.length != 14)
+                                //   || ((mobile.startsWith('92')) && mobile.length != 12)
+                                //   || (!mobile.startsWith('0092') && mobile.startsWith('0') && mobile.length > 11)
+                                // ) return 'Invalid Mobile Number';
                                 return null;
                               },
                             ),

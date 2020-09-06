@@ -66,11 +66,12 @@ class _SignInState extends State<SignIn> {
           Store.setToken(data['token']);
           Store.setIsLogged(true);
           Store.setUserInfo(jsonEncode(userInfo));
-          if(Store.getPin() == null){
-            Navigator.pushReplacementNamed(context, '/createpin');
-          }else{
-            Navigator.pushReplacementNamed(context, '/home');
-          }
+          Navigator.pushReplacementNamed(context, '/home');
+          // if(Store.getPin() == null){
+          //   Navigator.pushReplacementNamed(context, '/createpin');
+          // }else{
+          //   Navigator.pushReplacementNamed(context, '/home');
+          // }
         }
       }catch(e){
         print('SIGNUP_ERROR');

@@ -36,12 +36,21 @@ class _AnimalDetailsState extends State<AnimalDetails> {
     {'text':'Description', 'value': 'description'},
   ];
 
+  List<Map<String,String>> _animalGenderOptions = [
+    { 'text': 'Male', 'value': 'Male' },
+    { 'text': 'Female', 'value': 'Female' },
+  ];
+  List<Map<String,String>> _animalTypeOptions = [
+    { 'text': 'None', 'value': 'None' },
+  ];
+
   String _selectedMenu = 'health';
   String _filterMilkingBy = 'complete';
   final _milkingForm = GlobalKey<FormState>();
   final _healthForm = GlobalKey<FormState>();
   final _familyForm = GlobalKey<FormState>();
   final _descriptionForm = GlobalKey<FormState>();
+  final _animalEditForm = GlobalKey<FormState>();
   bool _submittingMilkingForm = false;
   Map<String, dynamic> _milkingFormData = {
     'morning_milk': '',
@@ -63,6 +72,7 @@ class _AnimalDetailsState extends State<AnimalDetails> {
   Map<String, dynamic> _descriptionFormData = {
     'description': '',
   };
+  Map<String, dynamic> _animalEditFormData = {};
 
   initState(){
     super.initState();
@@ -78,6 +88,7 @@ class _AnimalDetailsState extends State<AnimalDetails> {
     _allMaleAnimal = _initAnimal + Store.getAllAnimal().where((element) => element['gender'] == 'Male').toList();
     _allFemaleAnimal = _initAnimal + Store.getAllAnimal().where((element) => element['gender'] == 'Female').toList();
     await _fetchAnimalDetails();
+    _animalEditFormData = _animalDetails['product_details'];
     if(_animalDetails['female_parents_of_animals']['id'] != null){
       _familyFormData['female_parent'] = _animalDetails['female_parents_of_animals']['id'];
     }
@@ -108,7 +119,21 @@ class _AnimalDetailsState extends State<AnimalDetails> {
       Response res = await dio.get('/view_particular_element/?product_id=' + widget.id.toString());
       Map<String, dynamic> data = jsonDecode(res.data);
       _animalDetails = data;
-      print(_animalDetails);
+
+      if(_animalDetails['milk_all_record']['milk_data_by_row'].length >= 2){
+        _animalDetails['milk_all_record']['milk_data_by_row'].sort((a, b) {
+          var splitAdt = a['created_on'].toString().split('-');
+          var temp = splitAdt[2] + splitAdt[1] + splitAdt[0];
+          var aDt = DateTime.parse(temp).millisecondsSinceEpoch;
+          splitAdt = b['created_on'].toString().split('-');
+          temp = splitAdt[2] + splitAdt[1] + splitAdt[0];
+          var bDt = DateTime.parse(temp).millisecondsSinceEpoch;
+          if(aDt > bDt) return -1;
+          if(aDt < bDt) return 1;
+          return 0;
+        });
+      } 
+      print(_animalDetails['milk_all_record']['milk_data_by_row']);
     }catch(e){
       print('GET_ANIMAL_DETAILS_ERROR');
       print(e);
@@ -143,6 +168,15 @@ class _AnimalDetailsState extends State<AnimalDetails> {
 
   @override
   Widget build(BuildContext context) {
+    var parents = [];
+    if(!_fetchingData){
+      if(_animalDetails['male_parents_animal'].isNotEmpty){
+        parents.add(_animalDetails['male_parents_animal']);
+      } 
+      if(_animalDetails['female_parents_of_animals'].isNotEmpty){
+        parents.add(_animalDetails['female_parents_of_animals']);
+      }
+    }
     return Scaffold(
       body: _fetchingData ? Center(child: CircularProgressIndicator(),) : SafeArea(child: Container(
         padding: EdgeInsets.symmetric(vertical: 20),
@@ -422,6 +456,113 @@ class _AnimalDetailsState extends State<AnimalDetails> {
                                               });
                                               print(formData.fields.toString());
                                               Response res = await dio.post('/health_popup/', data: formData);
+                                              print(res);
+                                              await _fetchAnimalDetails();
+                                              Navigator.pop(context);
+                                            }catch(e){
+                                              print('ADD_HEALTH_ERROR');
+                                              print(e);
+                                            }
+                                            setState(() => _submittingMilkingForm = false);
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  ],),
+
+                                ],),),) 
+                                :_selectedMenu == 'milking' ? Form(key: _milkingForm, child: Container(padding: EdgeInsets.symmetric(horizontal: 20),child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                  Text('Morning Milk', style: TextStyle(
+                                    fontSize: 16,
+                                    color: Color.fromRGBO(42, 60, 91, 1.0),
+                                    decoration: TextDecoration.none,
+                                  ),textAlign: TextAlign.left,),
+                                  TextFormField(
+                                    keyboardType: TextInputType.number,
+                                    style: TextStyle(
+                                      fontSize: 15
+                                    ),
+                                    decoration: InputDecoration(
+                                      hintText: 'Morning Milk',
+                                      contentPadding: new EdgeInsets.symmetric(vertical: 10.0, horizontal: 10.0),
+                                      isDense: true,
+                                      fillColor: Colors.white,
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10.0),
+                                        borderSide: BorderSide(
+                                          color: Color.fromRGBO(229, 229, 229, 1.0),
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10.0),
+                                        borderSide: BorderSide(
+                                          color: Color.fromRGBO(229, 229, 229, 1.0),
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                    ),
+                                    onSaved: (val) => _milkingFormData['morning_milk'] = val.trim(),
+                                    validator: (value) => value.isEmpty ? 'Required' : null,
+                                  ),
+                                  SizedBox(height: 20),
+                                  Text('Evening Milk', style: TextStyle(
+                                    fontSize: 16,
+                                    color: Color.fromRGBO(42, 60, 91, 1.0),
+                                    decoration: TextDecoration.none,
+                                  ),textAlign: TextAlign.left,),
+                                  TextFormField(
+                                    keyboardType: TextInputType.number,
+                                    style: TextStyle(
+                                      fontSize: 15
+                                    ),
+                                    decoration: InputDecoration(
+                                      hintText: 'Evening Milk',
+                                      contentPadding: new EdgeInsets.symmetric(vertical: 10.0, horizontal: 10.0),
+                                      isDense: true,
+                                      fillColor: Colors.white,
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10.0),
+                                        borderSide: BorderSide(
+                                          color: Color.fromRGBO(229, 229, 229, 1.0),
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10.0),
+                                        borderSide: BorderSide(
+                                          color: Color.fromRGBO(229, 229, 229, 1.0),
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                    ),
+                                    onSaved: (val) => _milkingFormData['evening_milk'] = val.trim(),
+                                    validator: (value) => value.isEmpty ? 'Required' : null,
+                                  ),
+                                  SizedBox(height: 20),
+
+                                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                                    SizedBox(
+                                      width: PERCENT(MediaQuery.of(context).size.width, 70),
+                                      child: BUTTON(
+                                        text: 'Save Information',
+                                        fontSize: 18.0,
+                                        borderRadius: 7.0,
+                                        color: Theme.of(context).primaryColor,
+                                        textColor: Colors.white,
+                                        submitting: _submittingMilkingForm,
+                                        onPressed: () async {
+                                          if (_milkingForm.currentState.validate()) {
+                                            setState(() => _submittingMilkingForm = true);
+                                            _milkingForm.currentState.save();
+                                            try{
+                                              FormData formData = new FormData.fromMap({
+                                                "animal_particular_id": widget.id,
+                                                "morning_time": _milkingFormData['morning_milk'].toString(),
+                                                "evening_time": _milkingFormData['evening_milk'].toString(),
+                                              });
+                                              print(formData.fields.toString());
+                                              Response res = await dio.post('/milking_popup/', data: formData);
                                               print(res);
                                               await _fetchAnimalDetails();
                                               Navigator.pop(context);
@@ -836,7 +977,7 @@ class _AnimalDetailsState extends State<AnimalDetails> {
               ),
               child: Center(child: SvgPicture.asset('lib/assets/svg/bell.svg')),
             ),
-            Container(
+            InkWell(child: Container(
               height: 40, 
               width: 40, 
               decoration: BoxDecoration(
@@ -844,7 +985,389 @@ class _AnimalDetailsState extends State<AnimalDetails> {
                 borderRadius: BorderRadius.circular(40),
               ),
               child: Center(child: SvgPicture.asset('lib/assets/svg/edit_pencil.svg')),
-            ),
+            ),onTap: ()async{
+              TextEditingController animalTagController = new TextEditingController(text: _animalEditFormData['animal_tag']);
+              TextEditingController costOfPurchaseController = new TextEditingController(text: _animalEditFormData['cost_purchase']);
+              showGeneralDialog(
+                barrierLabel: "Label",
+                barrierDismissible: true,
+                barrierColor: Colors.black.withOpacity(0.5),
+                transitionDuration: Duration(milliseconds: 500),
+                context: context,
+                pageBuilder: (context, anim1, anim2) {
+                  return StatefulBuilder(
+                    builder: (context, setState) {
+                      return Align(
+                        alignment: Alignment.topCenter,
+                        child: Scaffold(backgroundColor: Colors.transparent, body: ListView(children: [ 
+                            Container(
+                              width: MediaQuery.of(context).size.width,
+                              height: MediaQuery.of(context).size.height - 100,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                              ),
+                              child: Column(children: [Expanded(child: ListView(children: [
+                                SizedBox(height: 50),
+                                
+                                Container(padding: EdgeInsets.symmetric(horizontal: 20), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.center, children: [
+                                  Text('Edit Animal', style: TextStyle(
+                                    fontSize: 18,
+                                    color: Color.fromRGBO(42, 60, 91, 1.0),
+                                    decoration: TextDecoration.none,
+                                  ),),
+                                  InkWell(child: Container(
+                                    height: 18,
+                                    width: 18,
+                                    child: Center(child: SvgPicture.asset('lib/assets/svg/cross.svg',),)
+                                  ),onTap: _submittingMilkingForm ? null : () => Navigator.pop(context),),
+                                ],),),
+
+                                SizedBox(height: 10),
+                                Divider(height: 20,),
+                                SizedBox(height: 10),
+
+                                Form(key: _animalEditForm, child: Container(padding: EdgeInsets.symmetric(horizontal: 20),child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                  Text('Animal Tag', style: TextStyle(
+                                    fontSize: 16,
+                                    color: Color.fromRGBO(42, 60, 91, 1.0),
+                                    decoration: TextDecoration.none,
+                                  ),textAlign: TextAlign.left,),
+                                  TextFormField(
+                                    controller: animalTagController,
+                                    style: TextStyle(
+                                      fontSize: 15
+                                    ),
+                                    decoration: InputDecoration(
+                                      hintText: 'Animal Tag',
+                                      contentPadding: new EdgeInsets.symmetric(vertical: 10.0, horizontal: 10.0),
+                                      isDense: true,
+                                      fillColor: Colors.white,
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10.0),
+                                        borderSide: BorderSide(
+                                          color: Color.fromRGBO(229, 229, 229, 1.0),
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10.0),
+                                        borderSide: BorderSide(
+                                          color: Color.fromRGBO(229, 229, 229, 1.0),
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                    ),
+                                    onChanged: (val) => _animalEditFormData['animal_tag'] = val.trim(),
+                                    validator: (value) => value.isEmpty ? 'Required' : null,
+                                  ),
+                                  SizedBox(height: 20),
+                                  Text('Age', style: TextStyle(
+                                    fontSize: 16,
+                                    color: Color.fromRGBO(42, 60, 91, 1.0),
+                                    decoration: TextDecoration.none,
+                                  ),textAlign: TextAlign.left,),
+                                  InkWell(
+                                    child: Container(
+                                      padding: EdgeInsets.only(left: 20,),
+                                      height: 40,
+                                      decoration: BoxDecoration(
+                                        border: Border.all(
+                                          color: Color.fromRGBO(229, 229, 229, 1.0),
+                                          width: 1.5,
+                                        ),
+                                        borderRadius: BorderRadius.circular(10)
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Container(
+                                            child: _animalEditFormData['animal_date_of_birth'] != null ? Text(_animalEditFormData['animal_date_of_birth'].toString().substring(0,10)) : Text('Age'),
+                                          ),
+                                          Container(
+                                            width: 50,
+                                            height: 50,
+                                            decoration: BoxDecoration(
+                                              color: Theme.of(context).primaryColor,
+                                              borderRadius: BorderRadius.only(
+                                                topRight: Radius.circular(10),
+                                                bottomRight: Radius.circular(10)
+                                              )
+                                            ),
+                                            child: Icon(Icons.event, color: Colors.white,),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    onTap: (){
+                                      showDatePicker(context: context, initialDate: DateTime.now(), firstDate: DateTime(1950), lastDate: DateTime.now(), )
+                                      .then((value) => {
+                                        setState(()=>_animalEditFormData['animal_date_of_birth'] = value)
+                                      });
+                                    },
+                                  ),
+                                  SizedBox(height: 20,),
+                                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                                    Container(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                      Text('Gender', style: TextStyle(
+                                        fontSize: 16,
+                                        color: Color.fromRGBO(42, 60, 91, 1.0),
+                                        decoration: TextDecoration.none,
+                                      ),textAlign: TextAlign.left,),
+                                      Container(
+                                        width: PERCENT(MediaQuery.of(context).size.width, 42),
+                                        decoration: BoxDecoration(
+                                          border: Border.all(
+                                            color: Color.fromRGBO(229, 229, 229, 1.0),
+                                            width: 1.5,
+                                          ),
+                                          borderRadius: BorderRadius.circular(10)
+                                        ),
+                                        child: DropdownButtonHideUnderline(
+                                          child: ButtonTheme(
+                                            alignedDropdown: true,
+                                            child: DropdownButton<String>(
+                                              value: _animalEditFormData['animal_gender'],
+                                              items: _animalGenderOptions.map((x) => DropdownMenuItem<String>(
+                                                value: x['value'],
+                                                child: Text(
+                                                  x['text'],
+                                                  textAlign: TextAlign.left,
+                                                ),
+                                              ))
+                                              .toList(),
+                                              onChanged: (val) => setState(() {
+                                                _animalEditFormData['animal_gender'] = val;
+                                              }),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],),),
+                                    Container(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                      Text('Animal Type', style: TextStyle(
+                                        fontSize: 16,
+                                        color: Color.fromRGBO(42, 60, 91, 1.0),
+                                        decoration: TextDecoration.none,
+                                      ),textAlign: TextAlign.left,),
+                                      Container(
+                                        width: PERCENT(MediaQuery.of(context).size.width, 42),
+                                        decoration: BoxDecoration(
+                                          border: Border.all(
+                                            color: Color.fromRGBO(229, 229, 229, 1.0),
+                                            width: 1.5,
+                                          ),
+                                          borderRadius: BorderRadius.circular(10)
+                                        ),
+                                        child: DropdownButtonHideUnderline(
+                                          child: ButtonTheme(
+                                            alignedDropdown: true,
+                                            child: DropdownButton<String>(
+                                              value: _animalEditFormData['animal_type'],
+                                              items: _animalTypeOptions.map((x) => DropdownMenuItem<String>(
+                                                value: x['value'],
+                                                child: Text(
+                                                  x['text'],
+                                                  textAlign: TextAlign.left,
+                                                ),
+                                              ))
+                                              .toList(),
+                                              onChanged: (val) => setState(() {
+                                                _animalEditFormData['animal_type'] = val;
+                                              }),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],),),
+                                  ],),
+                                  SizedBox(height: 20),
+                                  Text('Status Date', style: TextStyle(
+                                    fontSize: 16,
+                                    color: Color.fromRGBO(42, 60, 91, 1.0),
+                                    decoration: TextDecoration.none,
+                                  ),textAlign: TextAlign.left,),
+                                  InkWell(
+                                    child: Container(
+                                      padding: EdgeInsets.only(left: 20,),
+                                      height: 40,
+                                      decoration: BoxDecoration(
+                                        border: Border.all(
+                                          color: Color.fromRGBO(229, 229, 229, 1.0),
+                                          width: 1.5,
+                                        ),
+                                        borderRadius: BorderRadius.circular(10)
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Container(
+                                            child: _animalEditFormData['date_of_purchase'] != null ? Text(_animalEditFormData['date_of_purchase'].toString().substring(0,10)) : Text('Status Date'),
+                                          ),
+                                          Container(
+                                            width: 50,
+                                            height: 50,
+                                            decoration: BoxDecoration(
+                                              color: Theme.of(context).primaryColor,
+                                              borderRadius: BorderRadius.only(
+                                                topRight: Radius.circular(10),
+                                                bottomRight: Radius.circular(10)
+                                              )
+                                            ),
+                                            child: Icon(Icons.event, color: Colors.white,),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    onTap: (){
+                                      showDatePicker(context: context, initialDate: DateTime.now(), firstDate: DateTime(1950), lastDate: DateTime.now(), )
+                                      .then((value) => {
+                                        setState(()=>_animalEditFormData['date_of_purchase'] = value)
+                                      });
+                                    },
+                                  ),
+                                  SizedBox(height: 20,),
+                                  Text('Cost Of Purchase', style: TextStyle(
+                                    fontSize: 16,
+                                    color: Color.fromRGBO(42, 60, 91, 1.0),
+                                    decoration: TextDecoration.none,
+                                  ),textAlign: TextAlign.left,),
+                                  TextFormField(
+                                    controller: costOfPurchaseController,
+                                    keyboardType: TextInputType.number,
+                                    style: TextStyle(
+                                      fontSize: 15
+                                    ),
+                                    decoration: InputDecoration(
+                                      hintText: 'Cost Of Purchase',
+                                      contentPadding: new EdgeInsets.symmetric(vertical: 10.0, horizontal: 10.0),
+                                      isDense: true,
+                                      fillColor: Colors.white,
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10.0),
+                                        borderSide: BorderSide(
+                                          color: Color.fromRGBO(229, 229, 229, 1.0),
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10.0),
+                                        borderSide: BorderSide(
+                                          color: Color.fromRGBO(229, 229, 229, 1.0),
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                    ),
+                                    onChanged: (val) => _animalEditFormData['cost_purchase'] = val.trim(),
+                                    validator: (value) => value.isEmpty ? 'Required' : null,
+                                  ),
+                                  SizedBox(height: 20),
+                                  Text('Date Of Purchase', style: TextStyle(
+                                    fontSize: 16,
+                                    color: Color.fromRGBO(42, 60, 91, 1.0),
+                                    decoration: TextDecoration.none,
+                                  ),textAlign: TextAlign.left,),
+                                  InkWell(
+                                    child: Container(
+                                      padding: EdgeInsets.only(left: 20,),
+                                      height: 40,
+                                      decoration: BoxDecoration(
+                                        border: Border.all(
+                                          color: Color.fromRGBO(229, 229, 229, 1.0),
+                                          width: 1.5,
+                                        ),
+                                        borderRadius: BorderRadius.circular(10)
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Container(
+                                            child: _animalEditFormData['date_of_purchase'] != null ? Text(_animalEditFormData['date_of_purchase'].toString().substring(0,10)) : Text('Date of Purchase'),
+                                          ),
+                                          Container(
+                                            width: 50,
+                                            height: 50,
+                                            decoration: BoxDecoration(
+                                              color: Theme.of(context).primaryColor,
+                                              borderRadius: BorderRadius.only(
+                                                topRight: Radius.circular(10),
+                                                bottomRight: Radius.circular(10)
+                                              )
+                                            ),
+                                            child: Icon(Icons.event, color: Colors.white,),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    onTap: (){
+                                      showDatePicker(context: context, initialDate: DateTime.now(), firstDate: DateTime(1950), lastDate: DateTime.now(), )
+                                      .then((value) => {
+                                        setState(()=>_animalEditFormData['date_of_purchase'] = value)
+                                      });
+                                    },
+                                  ),SizedBox(height: 20),
+
+                                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                                    SizedBox(
+                                      width: PERCENT(MediaQuery.of(context).size.width, 70),
+                                      child: BUTTON(
+                                        text: 'Save Information',
+                                        fontSize: 18.0,
+                                        borderRadius: 7.0,
+                                        color: Theme.of(context).primaryColor,
+                                        textColor: Colors.white,
+                                        submitting: _submittingMilkingForm,
+                                        onPressed: () async {
+                                          if (_animalEditForm.currentState.validate()) {
+                                            setState(() => _submittingMilkingForm = true);
+                                            _animalEditForm.currentState.save();
+                                            try{
+                                              FormData formData = new FormData.fromMap({
+                                                "animal_particular_id": widget.id,
+                                                "animal_tag": _animalEditFormData['animal_tag'],
+                                                "age": _animalEditFormData['animal_date_of_birth'] == null ? _animalEditFormData['animal_date_of_birth'] : _animalEditFormData['animal_date_of_birth'].toString().substring(0,10),
+                                                "gender": _animalEditFormData['animal_gender'],
+                                                "animal_type": _animalEditFormData['animal_type'],
+                                                "cost_purchase": _animalEditFormData['cost_purchase'].toString(),
+                                                "date_of_purchase": _animalEditFormData['date_of_purchase'] == null ? '' : _animalEditFormData['date_of_purchase'].toString().substring(0,10),
+                                              });
+                                              print(formData.fields.toString());
+                                              Response res = await dio.post('/main_animal_info_update/', data: formData);
+                                              print(res);
+                                              await _fetchAnimalDetails();
+                                              Navigator.pop(context);
+                                            }catch(e){
+                                              print('EDIT_ANIMAL_ERROR');
+                                              print(e);
+                                            }
+                                            setState(() => _submittingMilkingForm = false);
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  ],),
+
+                                ],),),),
+
+                                SizedBox(height: 50),
+                              ],),),],),
+                            ),
+                            // InkWell(child: Container(height: MediaQuery.of(context).size.height > 430 ? MediaQuery.of(context).size.height-430 : 0, width: MediaQuery.of(context).size.width,),onTap: () => Navigator.pop(context),),
+                            ],
+                          ),
+                        )
+                      );
+                    },
+                  );
+                },
+                transitionBuilder: (context, anim1, anim2, child) {
+                  return SlideTransition(
+                    position: Tween(begin: Offset(0, -1), end: Offset(0, 0)).animate(anim1),
+                    child: child,
+                  );
+                },
+              ).then((value) => setState((){}));
+            
+            },),
             Container(
               height: 40, 
               width: 81, 
@@ -853,13 +1376,24 @@ class _AnimalDetailsState extends State<AnimalDetails> {
                 borderRadius: BorderRadius.circular(40),
               ),
               child: Switch(
-                value: true, 
+                value: _animalDetails['product_details']['animal_active_or_inactive'],
                 inactiveThumbColor: Colors.white,
                 inactiveTrackColor: Theme.of(context).primaryColor, 
                 activeTrackColor: Theme.of(context).primaryColor, 
                 activeColor: Colors.white,
-                onChanged: (v){
-
+                onChanged: (v) async {
+                  try{
+                    print(v);
+                    if(v){
+                      Response res = await dio.get('/deactivate_animal/?id=' + widget.id.toString());
+                    }else{
+                      Response res = await dio.get('/deactivate_animal/?id=' + widget.id.toString());
+                    }
+                    await _fetchAnimalDetails();
+                  }catch(e){
+                    print('EDIT_STATUS_ERROR');
+                    print(e);
+                  }
                 },
               ),
             ),
@@ -950,7 +1484,7 @@ class _AnimalDetailsState extends State<AnimalDetails> {
               color: Color.fromRGBO(42, 60, 91, 1.0),
             ),),
             SizedBox(height: 20,),
-          ] + [_animalDetails['male_parents_animal'] , _animalDetails['female_parents_of_animals']].map<Widget>((parent) =>
+          ] + parents.map<Widget>((parent) =>
             Container(
               child: Container(
                 padding: EdgeInsets.symmetric(horizontal: 10),
@@ -1135,7 +1669,8 @@ class _AnimalDetailsState extends State<AnimalDetails> {
                   fontSize: 13,
                   color: Color.fromRGBO(42, 60, 91, 1.0),
                 ),)),
-              ], rows: _animalDetails['milk_all_record']['milk_data_by_row'].map<DataRow>((milkRecord) => DataRow(cells: [
+              ], 
+              rows: _animalDetails['milk_all_record']['milk_data_by_row'].map<DataRow>((milkRecord) => DataRow(cells: [
                 DataCell(Text(milkRecord['created_on'], style: TextStyle(
                   fontSize: 11,
                   color: Color.fromRGBO(42, 60, 91, 1.0)

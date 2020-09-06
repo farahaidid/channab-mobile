@@ -79,7 +79,8 @@ class _AnimalListState extends State<AnimalList> {
     'animal_type':[],
     'animal_status':[],
     'animal_female_type':[],
-    'animal_age':[]
+    'animal_age':[],
+    'category': -1
   };
 
   initState(){
@@ -136,30 +137,41 @@ class _AnimalListState extends State<AnimalList> {
     setState(() => _fetchingData = true);
     List<dynamic> _tempAnimals = _animals;
     try{
-      var obj = {};
-      _filterBy['animal_type'].forEach((element) {
-        if(element == 'Male') obj['Male'] = element;
-        else if(element == 'Female') obj['Female'] = element;
-      });
-      _filterBy['animal_status'].forEach((element) {
-        if(element == 'Active') obj['active_status'] = element;
-        else if(element == 'Retired') obj['retired_category'] = element;
-      });
-      _filterBy['animal_female_type'].forEach((element) {
-        if(element == 'Dry') obj['dry_female_status'] = element;
-        else if(element == 'Milking') obj['milking_status'] = element;
-      });
-      _filterBy['animal_age'].forEach((element) {
-        if(element == 'less_than_3_month') obj['less_than_3_month'] = element;
-        else if(element == 'less_than_six') obj['less_than_six'] = element;
-        else if(element == 'less_then_one') obj['less_then_one'] = element;
-        else if(element == 'less_then_one_point_six') obj['less_then_one_point_six'] = element;
-        else if(element == 'more_then_one_pont_six') obj['more_then_one_pont_six'] = element;
-      });
-      FormData formData = new FormData.fromMap(obj);
-      Response res = await dio.post('/search_listing/', data: formData);
-      Map<String, dynamic> data = jsonDecode(res.data);
-      _tempAnimals = data['all_animal_list'];
+      if(_filterBy['category'] != -1){
+        Response res = await dio.post('/search_listingcategory_wise_animals/?category_id=' + _filterBy['category'].toString());
+        print(res);
+        Map<String, dynamic> data = jsonDecode(res.data);
+        _tempAnimals = data['filtered_animals'];
+      }else{
+        Map<String,dynamic> obj = {};
+        _filterBy['animal_type'].forEach((element) {
+          if(element == 'Male') obj['Male'] = element;
+          else if(element == 'Female') obj['Female'] = element;
+        });
+        _filterBy['animal_status'].forEach((element) {
+          if(element == 'Active') obj['active_status'] = element;
+          else if(element == 'Retired') obj['retired_category'] = element;
+        });
+        _filterBy['animal_female_type'].forEach((element) {
+          if(element == 'Dry') obj['dry_female_status'] = element;
+          else if(element == 'Milking') obj['milking_status'] = element;
+        });
+        _filterBy['animal_age'].forEach((element) {
+          if(element == 'less_than_3_month') obj['less_than_3_month'] = element;
+          else if(element == 'less_than_six') obj['less_than_six'] = element;
+          else if(element == 'less_then_one') obj['less_then_one'] = element;
+          else if(element == 'less_then_one_point_six') obj['less_then_one_point_six'] = element;
+          else if(element == 'more_then_one_pont_six') obj['more_then_one_pont_six'] = element;
+        });
+        FormData formData = new FormData.fromMap(obj);
+        if(obj.isEmpty){
+          _tempAnimals = _animals;
+        }else{
+          Response res = await dio.post('/search_listing/', data: formData);
+          Map<String, dynamic> data = jsonDecode(res.data);
+          _tempAnimals = data['all_animal_list'];
+        }
+      }
     }catch(e){
       print('GET_CATEGORY_WISE_ANIMAL_LIST_ERROR');
       print(e);
@@ -205,16 +217,17 @@ class _AnimalListState extends State<AnimalList> {
                           alignment: Alignment.bottomCenter,
                           child: Container(
                             width: MediaQuery.of(context).size.width,
-                            height: MediaQuery.of(context).size.height - 200,
+                            height: MediaQuery.of(context).size.height,
                             padding: EdgeInsets.symmetric(horizontal: 20),
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.only(
-                                topLeft: Radius.circular(40),
-                                topRight: Radius.circular(40),
-                              ),
+                              // borderRadius: BorderRadius.only(
+                              //   topLeft: Radius.circular(40),
+                              //   topRight: Radius.circular(40),
+                              // ),
                             ),
                             child: Column(children: [Expanded(child: ListView(children: [
+                              SizedBox(height: 50),
                               Container(
                                 margin: EdgeInsets.symmetric(horizontal: 15), 
                                 child: Text('Filter', style: TextStyle(
@@ -341,19 +354,30 @@ class _AnimalListState extends State<AnimalList> {
         child: Column(children: [
           Expanded(child: Container(
             child: ListView(children: [
-              Container(margin: EdgeInsets.symmetric(horizontal: 20, vertical: 10), height: 23, child: ListView(scrollDirection: Axis.horizontal, children: [1,2,3,4].map((n) => Container(
+              Container(margin: EdgeInsets.symmetric(horizontal: 20, vertical: 10), height: 23, child: ListView(scrollDirection: Axis.horizontal, children: _categories.map((category) => 
+                InkWell(child:Container(
                   height: 50,
                   width: 77,
                   margin: EdgeInsets.only(right: 10),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor,
+                    color: _filterBy['category'] == category['id'] || _filterBy['category'] == -1 ? Theme.of(context).primaryColor : Colors.transparent,
                     borderRadius: BorderRadius.circular(23),
+                    border: Border.all(
+                      color: Theme.of(context).primaryColor
+                    )
                   ),
-                  child: Center(child: Text('None', style: TextStyle(
+                  child: Center(child: Text(category['name_of_category'], style: TextStyle(
                     fontSize: 13,
-                    color: Colors.white,
+                    color: _filterBy['category'] == category['id'] || _filterBy['category'] == -1 ? Colors.white : Theme.of(context).primaryColor,
                   ),),),
-                )).toList(),),
+                ),onTap: () {
+                  if(_filterBy['category'] == category['id']){
+                    _filterBy['category'] = -1;
+                  }else{
+                    _filterBy['category'] = category['id'];
+                  }
+                  _filter();
+                },),).toList(),),
               ),
 
               SizedBox(height: 30,),
