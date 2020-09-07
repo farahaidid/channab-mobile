@@ -213,7 +213,7 @@ class _FarmAnimalFormState extends State<FarmAnimalForm> {
                     ),
                   ),
                   onTap: (){
-                    showDatePicker(context: context, initialDate: DateTime.now(), firstDate: DateTime(1950), lastDate: DateTime(2021))
+                    showDatePicker(context: context, initialDate: DateTime.now(), firstDate: DateTime(1950), lastDate: DateTime.now(), )
                     .then((value) => {
                       setState(()=>_date = value)
                     });
